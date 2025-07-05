@@ -1,22 +1,82 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# TravelAdvisor
+
+A travel planning and mapping application built with Next.js.
+
+## Features
+
+- Interactive map with MapLibre GL
+- Location search and autocomplete
+- Route planning between locations
+- Nearby places discovery (banks, ATMs, currency exchange)
+- Responsive design
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Node.js 18+ 
+- npm or yarn
+
+### Installation
+
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Set up environment variables:
+   Create a `.env.local` file in the root directory and add:
+   ```
+   NEXT_PUBLIC_MAPTILER_API_KEY=your_maptiler_api_key_here
+   ```
+   
+   Get your free MapTiler API key from: https://www.maptiler.com/
+
+4. Run the development server:
+   ```bash
+   npm run dev
+   ```
+
+5. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+## Usage
+
+1. Start on the landing page
+2. Click "Get Started" to navigate to the map
+3. Enter start and destination locations
+4. View nearby places and plan your route
+
+## Technologies Used
+
+- Next.js 15
+- React 19
+- MapLibre GL
+- Tailwind CSS
+- OpenStreetMap Nominatim API
+- Overpass API
+
+## API Endpoints
+
+- `/api/overpass` - Fetch nearby places using Overpass API
+
+## Project Structure
+
 ```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+src/
+├── app/
+│   ├── api/overpass/route.js
+│   ├── Landing/page.jsx
+│   ├── map/page.jsx
+│   ├── globals.css
+│   ├── layout.js
+│   └── page.js
+├── styles/
+│   └── ta.css
+└── utils/
+    ├── locationUtils.js
+    └── overpassUtils.js
+```
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
