@@ -10,7 +10,7 @@ export default function Landing() {
         <p className="text-lg text-gray-600 mb-8">
           Plan your journey with interactive maps and discover nearby places
         </p>
-        <a href='/map'>
+        <a href='/dashboard'>
           <button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200">
             Get Started
           </button>

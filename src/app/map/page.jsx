@@ -6,8 +6,10 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import "../../styles/ta.css"; // Adjust path if needed
 import { fetchLocations } from "../../utils/locationUtils";
 import { fetchNearbyPlaces } from "../../utils/overpassUtils";
+import { useRouter } from "next/navigation";
 
 export default function MapPage() {
+  const router = useRouter();
   const mapContainer = useRef(null);
   const map = useRef(null);
   const [startLocation, setStartLocation] = useState("");
@@ -21,10 +23,13 @@ export default function MapPage() {
   const [isDestLoading, setIsDestLoading] = useState(false);
   const [error, setError] = useState("");
   const [isFlyingToDestination, setIsFlyingToDestination] = useState(false);
+  const [showOverpass, setShowOverpass] = useState(false);
   const startDebounceTimer = useRef(null);
   const destDebounceTimer = useRef(null);
   const startInputRef = useRef(null);
   const destInputRef = useRef(null);
+  const startMarkerRef = useRef(null);
+  const destMarkerRef = useRef(null);
 
   const MAPTILER_API_KEY = process.env.NEXT_PUBLIC_MAPTILER_API_KEY;
 
@@ -39,6 +44,8 @@ export default function MapPage() {
       zoom: 5,
     });
 
+
+
     return () => {
       if (map.current) {
         map.current.remove();
@@ -47,13 +54,124 @@ export default function MapPage() {
     };
   }, [MAPTILER_API_KEY]);
 
+  const addOverpassMarkers = (places) => {
+    console.log("Adding overpass markers with data:", places);
+    
+    overpassMarkers.forEach((marker) => marker.remove());
+  
+    // Filter for places with coordinates and amenity tags
+    const validPlaces = places.filter((p) => {
+      const hasAmenity = p.tags && p.tags.amenity;
+      
+      if (!hasAmenity) return false;
+      
+      // For nodes, use lat/lon directly
+      if (p.type === 'node') {
+        return Number.isFinite(p.lon) && Number.isFinite(p.lat);
+      }
+      
+      // For ways (polygons), check if they have lat/lon (some do)
+      if (p.type === 'way') {
+        return Number.isFinite(p.lon) && Number.isFinite(p.lat);
+      }
+      
+      return false;
+    });
+  
+    console.log(
+      `Total places: ${places.length}, Valid places: ${validPlaces.length}`
+    );
+    console.log("Valid places:", validPlaces);
+  
+    const newMarkers = validPlaces.map((place) => {
+      const amenityType = place.tags?.amenity
+        ? capitalize(place.tags.amenity.replace(/_/g, " "))
+        : "Amenity";
+  
+      const name = place.tags?.name || place.tags?.brand || "Unknown";
+  
+      const popupHTML = `
+        <div style="font-size: 14px; padding: 8px; max-width: 250px;">
+          <strong style="color: #333; font-size: 16px;">${name}</strong><br/>
+          <span style="color: #666; font-size: 12px;">${amenityType}</span>
+          ${place.tags?.brand && place.tags.brand !== name ? `<br/><span style="color: #888; font-size: 11px;">Brand: ${place.tags.brand}</span>` : ""}
+          ${place.tags?.opening_hours ? `<br/><span style="color: #888; font-size: 11px;">Hours: ${place.tags.opening_hours}</span>` : ""}
+          ${place.tags?.atm === 'yes' ? `<br/><span style="color: green; font-size: 11px;">✓ ATM Available</span>` : ""}
+          ${place.tags?.wheelchair === 'yes' ? `<br/><span style="color: blue; font-size: 11px;">♿ Wheelchair Accessible</span>` : ""}
+          ${place.tags?.['addr:street'] ? `<br/><span style="color: #666; font-size: 11px;">📍 ${place.tags['addr:street']}</span>` : ""}
+        </div>
+      `;
+  
+      const markerColor = getMarkerColor(place.tags?.amenity);
+  
+      console.log(`Creating marker for ${name} at [${place.lon}, ${place.lat}] with color ${markerColor}`);
+  
+      const marker = new maplibregl.Marker({ color: markerColor })
+        .setLngLat([place.lon, place.lat])
+        .addTo(map.current);
+  
+      // Add a title attribute for debugging
+      marker.getElement().title = `Click to see details for ${name}`;
+      
+      marker.getElement().addEventListener("click", () => {
+        console.log(`Marker clicked for ${name}`);
+        console.log(`Popup content:`, popupHTML);
+        
+        // Close any existing popups first
+        const existingPopups = document.querySelectorAll('.maplibregl-popup');
+        existingPopups.forEach(p => p.remove());
+        
+        // Create and show the popup
+        const newPopup = new maplibregl.Popup({
+          closeButton: true,
+          closeOnClick: false,
+          maxWidth: '300px',
+          className: 'custom-popup',
+          offset: 10
+        })
+        .setLngLat([place.lon, place.lat])
+        .setHTML(popupHTML)
+        .addTo(map.current);
+        
+        console.log('Popup added to map:', newPopup);
+        
+        map.current.flyTo({
+          center: [place.lon, place.lat],
+          zoom: 15,
+          speed: 1.5,
+          curve: 1.2,
+          essential: true,
+        });
+      });
+      
+      // Also add a hover effect
+      marker.getElement().style.cursor = "pointer";
+  
+      return marker;
+    });
+  
+    console.log(`Created ${newMarkers.length} markers`);
+    setOverpassMarkers(newMarkers);
+  };
+  
+
   // Update Markers and Route
   useEffect(() => {
     if (!map.current) return;
 
-    // Remove old markers
-    const existingMarkers = document.querySelectorAll(".maplibregl-marker");
-    existingMarkers.forEach((marker) => marker.remove());
+    // Remove old start/destination markers
+    if (startMarkerRef.current) {
+      startMarkerRef.current.remove();
+      startMarkerRef.current = null;
+    }
+    if (destMarkerRef.current) {
+      destMarkerRef.current.remove();
+      destMarkerRef.current = null;
+    }
+
+    // Clear overpass markers when coordinates change
+    overpassMarkers.forEach((marker) => marker.remove());
+    setOverpassMarkers([]);
 
     // Remove old routes
     if (map.current.getSource("route")) {
@@ -74,9 +192,12 @@ export default function MapPage() {
           curve: 1.4,
           essential: true,
         });
+        fetchNearbyPlaces(startCoords.lat, startCoords.lon).then(addOverpassMarkers);
       });
+
       startMarker.getElement().style.cursor = "pointer";
-      startMarker.getElement().title = `Start: ${startLocation}`;
+      startMarker.getElement().title = `Start: ${startLocation} (Click to see nearby places)`;
+      startMarkerRef.current = startMarker;
     }
 
     if (destCoords) {
@@ -92,9 +213,12 @@ export default function MapPage() {
           curve: 1.4,
           essential: true,
         });
+        fetchNearbyPlaces(destCoords.lat, destCoords.lon).then(addOverpassMarkers);
       });
+
       destMarker.getElement().style.cursor = "pointer";
-      destMarker.getElement().title = `Destination: ${destination}`;
+      destMarker.getElement().title = `Destination: ${destination} (Click to see nearby places)`;
+      destMarkerRef.current = destMarker;
     }
 
     if (startCoords && destCoords && !isFlyingToDestination) {
@@ -160,18 +284,6 @@ export default function MapPage() {
       setDestCoords(coords);
       setDestSuggestions([]);
 
-      fetchNearbyPlaces(coords.lat, coords.lon).then((places) => {
-        overpassMarkers.forEach((marker) => marker.remove());
-        const newMarkers = places.map((place) => {
-          const markerColor = getMarkerColor(place.tags?.amenity);
-          return new maplibregl.Marker({ color: markerColor })
-            .setLngLat([place.lon, place.lat])
-            .setPopup(new maplibregl.Popup().setText(place.tags?.name || place.tags?.amenity || "Unknown"))
-            .addTo(map.current);
-        });
-        setOverpassMarkers(newMarkers);
-      });
-
       map.current.flyTo({
         center: [coords.lon, coords.lat],
         speed: 1.2,
@@ -188,9 +300,18 @@ export default function MapPage() {
     return "gray";
   };
 
+  const capitalize = (str) =>
+    str ? str.charAt(0).toUpperCase() + str.slice(1) : "";
+
   const handleCheckCurrency = () => {
-    // TODO: Implement currency check functionality
-    alert("Currency check feature coming soon!");
+    // Scroll to currency section smoothly
+    const currencySection = document.getElementById('currency-section');
+    if (currencySection) {
+      currencySection.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
   };
 
   const handleAIChat = () => {
@@ -281,11 +402,11 @@ export default function MapPage() {
             <div className="legend-items">
               <div className="legend-item">
                 <div className="legend-color" style={{ backgroundColor: '#4CAF50' }}></div>
-                <span>Start Location</span>
+                <span>Start Location (Clickable)</span>
               </div>
               <div className="legend-item">
                 <div className="legend-color" style={{ backgroundColor: '#F44336' }}></div>
-                <span>Destination</span>
+                <span>Destination (Clickable)</span>
               </div>
               <div className="legend-item">
                 <div className="legend-color" style={{ backgroundColor: 'blue' }}></div>

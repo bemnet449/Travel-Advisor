@@ -17,8 +17,14 @@ export async function POST(req) {
   
       const query = `
         [out:json];
-        node["amenity"~"bank|atm|bureau_de_change"](${bbox});
-        out;
+        (
+          node["amenity"~"bank|atm|bureau_de_change"](${bbox});
+          way["amenity"~"bank|atm|bureau_de_change"](${bbox});
+          relation["amenity"~"bank|atm|bureau_de_change"](${bbox});
+        );
+        out body;
+        >;
+        out skel qt;
       `;
   
       const response = await fetch("https://overpass-api.de/api/interpreter", {
@@ -31,8 +37,11 @@ export async function POST(req) {
         throw new Error(`Overpass API error: ${response.status}`);
       }
   
-      const data = await response.json();
-  
+            const data = await response.json();
+      
+      console.log("Overpass API response:", data); // Debug log
+      console.log("Overpass elements:", data.elements); // Debug log
+
       return new Response(JSON.stringify(data.elements), {
         status: 200,
         headers: { "Content-Type": "application/json" },
