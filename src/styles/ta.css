@@ -1,7 +1,7 @@
 /* Dashboard Layout */
 .dashboard-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(to bottom right, #f472b6 0%, #a855f7 50%, #4f46e5 100%);
   padding: 5vh 5vw;
   display: flex;
   flex-direction: column;
@@ -14,7 +14,7 @@
   backdrop-filter: blur(20px);
   border-radius: 24px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(250, 242, 242, 0.2);
   padding: 24px;
   width: 95vw;
   height: 90vh;
@@ -473,7 +473,7 @@
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
   .dashboard-container {
-    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+    background: linear-gradient(to bottom right, #f472b6 0%, #a855f7 50%, #4f46e5 100%);
   }
   
   .dashboard-card {

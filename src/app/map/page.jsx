@@ -303,35 +303,13 @@ export default function MapPage() {
   const capitalize = (str) =>
     str ? str.charAt(0).toUpperCase() + str.slice(1) : "";
 
-  const handleCheckCurrency = () => {
-    // Scroll to currency section smoothly
-    const currencySection = document.getElementById('currency-section');
-    if (currencySection) {
-      currencySection.scrollIntoView({ 
-        behavior: 'smooth',
-        block: 'start'
-      });
-    }
-  };
 
-  const handleAIChat = () => {
-    // TODO: Implement AI chat functionality
-    alert("AI Chat feature coming soon!");
-  };
 
   return (
     <div className="dashboard-container">
       <div className="dashboard-card">
         <div className="dashboard-header">
           <h1 className="dashboard-title">🗺️ Travel Map</h1>
-          <div className="action-buttons">
-            <button className="btn btn-primary" onClick={handleCheckCurrency}>
-              💱 Check Currency
-            </button>
-            <button className="btn btn-secondary" onClick={handleAIChat}>
-              🤖 AI Chat
-            </button>
-          </div>
         </div>
 
         <div className="map-container">
