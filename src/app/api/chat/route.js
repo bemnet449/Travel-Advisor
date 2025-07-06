@@ -1,5 +1,3 @@
-export const runtime = "edge"; // Optional: Edge runtime for faster responses
-
 export async function POST(req) {
   try {
     const body = await req.json();
